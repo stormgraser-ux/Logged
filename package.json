@@ -1,0 +1,16 @@
+{
+  "name": "logged-extension",
+  "version": "0.1.0",
+  "description": "Passive job application tracker — zero friction, zero missed apps.",
+  "private": true,
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}
