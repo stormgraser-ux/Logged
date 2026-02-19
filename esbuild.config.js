@@ -42,6 +42,8 @@ const buildOptions = {
   entryPoints: [
     'src/background/service-worker.ts',
     'src/popup/popup.ts',
+    'src/content/detectors/linkedin.ts',
+    'src/content/detectors/indeed.ts',
   ],
   bundle: true,
   outdir: 'dist',

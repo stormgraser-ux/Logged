@@ -22,5 +22,17 @@
   },
   "background": {
     "service_worker": "background/service-worker.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*"],
+      "js": ["content/detectors/linkedin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.indeed.com/*", "*://smartapply.indeed.com/*"],
+      "js": ["content/detectors/indeed.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
