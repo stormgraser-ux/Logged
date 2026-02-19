@@ -6,6 +6,7 @@ import { STATUS_LABELS, STATUS_ORDER } from '../shared/constants';
 let applications: Application[] = [];
 let activeFilter: ApplicationStatus | 'all' = 'all';
 let searchQuery = '';
+let editingId: string | null = null;
 
 // ── DOM refs ─────────────────────────────────────────────
 
@@ -122,14 +123,95 @@ function getDaysSinceApplied(dateStr: string): number {
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+function buildEditForm(app: Application): HTMLFormElement {
+  const form = el('form', { className: 'edit-form' }) as HTMLFormElement;
+
+  const row1 = el('div', { className: 'form-row' });
+  const companyInput = el('input', { type: 'text', value: app.company, placeholder: 'Company *', required: '' }) as HTMLInputElement;
+  companyInput.name = 'company';
+  companyInput.value = app.company;
+  const roleInput = el('input', { type: 'text', value: app.role, placeholder: 'Role *', required: '' }) as HTMLInputElement;
+  roleInput.name = 'role';
+  roleInput.value = app.role;
+  row1.append(companyInput, roleInput);
+
+  const row2 = el('div', { className: 'form-row' });
+  const urlInput = el('input', { type: 'url', placeholder: 'Job posting URL (optional)' }) as HTMLInputElement;
+  urlInput.name = 'sourceUrl';
+  urlInput.value = app.sourceUrl;
+  const dateInput = el('input', { type: 'date' }) as HTMLInputElement;
+  dateInput.name = 'dateApplied';
+  dateInput.value = app.dateApplied;
+  row2.append(urlInput, dateInput);
+
+  const row3 = el('div', { className: 'form-row' });
+  const notesInput = el('input', { type: 'text', placeholder: 'Notes (optional)' }) as HTMLInputElement;
+  notesInput.name = 'notes';
+  notesInput.value = app.notes;
+  row3.append(notesInput);
+
+  const actions = el('div', { className: 'form-actions' });
+  const cancelBtn = el('button', { type: 'button', className: 'btn btn-ghost' }, 'Cancel');
+  const saveBtn = el('button', { type: 'submit', className: 'btn btn-primary' }, 'Save');
+  actions.append(cancelBtn, saveBtn);
+
+  form.append(row1, row2, row3, actions);
+
+  cancelBtn.addEventListener('click', () => {
+    editingId = null;
+    renderList();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const company = companyInput.value.trim();
+    const role = roleInput.value.trim();
+    if (!company || !role) return;
+
+    await send({
+      type: 'UPDATE_APPLICATION',
+      payload: {
+        id: app.id,
+        company,
+        role,
+        sourceUrl: urlInput.value.trim(),
+        dateApplied: dateInput.value || app.dateApplied,
+        notes: notesInput.value.trim(),
+      },
+    });
+
+    // Update local state
+    const idx = applications.findIndex(a => a.id === app.id);
+    if (idx !== -1) {
+      applications[idx] = {
+        ...applications[idx],
+        company,
+        role,
+        sourceUrl: urlInput.value.trim(),
+        dateApplied: dateInput.value || app.dateApplied,
+        notes: notesInput.value.trim(),
+      };
+    }
+
+    editingId = null;
+    renderList();
+  });
+
+  // Auto-focus company field after DOM insertion
+  requestAnimationFrame(() => companyInput.select());
+
+  return form;
+}
+
 function buildAppItem(app: Application): HTMLLIElement {
+  const isEditing = editingId === app.id;
   const days = getDaysSinceApplied(app.dateApplied);
   const showFollowUp = app.status === 'applied' && days >= 7;
 
   // Status dot
   const dot = el('div', { className: 'status-dot', 'data-status': app.status });
 
-  // Info section
+  // Info section (display mode)
   const company = el('div', { className: 'app-company' }, app.company);
   const role = el('div', { className: 'app-role' }, app.role);
 
@@ -145,8 +227,20 @@ function buildAppItem(app: Application): HTMLLIElement {
     metaChildren.push(el('span', { className: 'app-followup' }, 'Follow up?'));
   }
 
+  if (app.notes) {
+    metaChildren.push(el('span', { className: 'app-note-preview' }, app.notes));
+  }
+
   const meta = el('div', { className: 'app-meta' }, ...metaChildren);
   const info = el('div', { className: 'app-info' }, company, role, meta);
+
+  // Make info clickable to edit
+  info.style.cursor = 'pointer';
+  info.addEventListener('click', (e) => {
+    e.stopPropagation();
+    editingId = editingId === app.id ? null : app.id;
+    renderList();
+  });
 
   // Status select
   const select = el('select', { className: 'app-status-select', 'data-id': app.id });
@@ -162,7 +256,21 @@ function buildAppItem(app: Application): HTMLLIElement {
 
   const actions = el('div', { className: 'app-actions' }, select, deleteBtn);
 
-  return el('li', { className: 'app-item', 'data-id': app.id }, dot, info, actions);
+  const li = el('li', {
+    className: `app-item${isEditing ? ' app-item--editing' : ''}`,
+    'data-id': app.id,
+  });
+
+  // Top row: always visible
+  const topRow = el('div', { className: 'app-item-row' }, dot, info, actions);
+  li.appendChild(topRow);
+
+  // Edit form: shown when editing
+  if (isEditing) {
+    li.appendChild(buildEditForm(app));
+  }
+
+  return li;
 }
 
 function renderList() {

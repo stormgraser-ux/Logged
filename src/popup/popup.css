@@ -161,13 +161,16 @@ body {
 /* ── Application Item ─────────────────────────────────── */
 
 .app-item {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+  cursor: default;
+}
+
+.app-item-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  transition: background var(--transition);
-  cursor: default;
 }
 
 .app-item:hover {
@@ -176,6 +179,14 @@ body {
 
 .app-item:hover .app-delete {
   opacity: 1;
+}
+
+.app-item--editing {
+  background: var(--bg-raised);
+}
+
+.app-item--editing .app-info {
+  cursor: default;
 }
 
 .status-dot {
@@ -237,6 +248,55 @@ body {
   font-size: 10px;
   color: var(--status-interviewing);
   font-weight: 500;
+}
+
+.app-note-preview {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* ── Inline Edit Form ─────────────────────────────────── */
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px 12px 34px;
+}
+
+.edit-form .form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-form .form-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.edit-form .form-row input::placeholder {
+  color: var(--text-dim);
+}
+
+.edit-form .form-row input:focus {
+  border-color: var(--accent);
+}
+
+.edit-form .form-row input[type="date"] {
+  flex: 0 0 130px;
+  color-scheme: dark;
 }
 
 .app-actions {
