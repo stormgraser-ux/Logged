@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Software Engineer at Acme Corp</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #fff; margin: 0; padding: 20px; color: #333; }
+    .content { max-width: 750px; margin: 0 auto; }
+
+    /* Greenhouse selectors (REAL selectors the detector looks for) */
+    .company-name { color: #666; font-size: 16px; margin-bottom: 4px; }
+    .app-title { font-size: 26px; font-weight: 600; margin-bottom: 16px; }
+
+    .card { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #00a960; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+
+    .salary-info { background: #ecfdf5; color: #059669; padding: 8px 16px; border-radius: 6px; display: inline-block; margin: 8px 0; font-weight: 600; }
+
+    .signal-container > div { padding: 12px 16px; background: #d4edda; border-radius: 6px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <div class="test-controls">
+      <h3>Greenhouse Detector Test</h3>
+      <p>Simulates a Greenhouse job listing. The primary detection signal is navigating to a /confirmation URL,
+         but the detector also watches for confirmation text via MutationObserver.</p>
+      <p><strong>On load:</strong> The detector caches job data (company + role) from the DOM selectors.</p>
+      <p><strong>To trigger detection:</strong> Click a confirmation signal button below.</p>
+    </div>
+
+    <!-- Simulated Greenhouse job page with REAL selectors -->
+    <div class="card">
+      <span class="company-name">Acme Corp</span>
+      <h1 class="app-title">Software Engineer</h1>
+      <div>San Francisco, CA &middot; Full-time</div>
+      <div class="salary-info" data-testid="salary">$130,000 - $170,000 per year</div>
+    </div>
+
+    <div class="card">
+      <h3>About the role</h3>
+      <p>We're looking for a Software Engineer to join our growing team. You'll work on our core product, building features that millions of users rely on daily.</p>
+      <p><strong>Compensation:</strong> Base salary: $130,000 - $170,000 per year, plus equity, 401(k), and comprehensive benefits.</p>
+      <h4>Requirements</h4>
+      <ul>
+        <li>3+ years of software engineering experience</li>
+        <li>Proficiency in Python or Go</li>
+        <li>Experience with distributed systems</li>
+      </ul>
+    </div>
+
+    <!-- Confirmation signal controls -->
+    <div class="test-controls">
+      <h3>Trigger Confirmation Signals</h3>
+      <p>These simulate Greenhouse showing confirmation text after submission:</p>
+      <button class="test-btn" onclick="addSignal('Your application has been submitted successfully.')">
+        "application has been submitted"
+      </button>
+      <button class="test-btn" onclick="addSignal('Thank you for applying to this position. We will review your application shortly.')">
+        "thank you for applying"
+      </button>
+      <button class="test-btn" onclick="addSignal('Application received! We appreciate your interest in Acme Corp.')">
+        "application received"
+      </button>
+      <button class="test-btn" onclick="addSignal('Your application has been received. Our team will be in touch.')">
+        "application has been received"
+      </button>
+      <button class="test-btn" onclick="addSignal('Successfully submitted! Good luck with your application.')">
+        "successfully submitted"
+      </button>
+    </div>
+
+    <div class="signal-container" id="signalContainer"></div>
+  </div>
+
+  <script src="harness.js"></script>
+  <script>
+    function addSignal(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added confirmation text: "' + text.slice(0, 50) + '..."');
+    }
+  </script>
+  <script>
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Run server from PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/greenhouse.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

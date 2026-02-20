@@ -1,12 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Logged — Job Application Tracker",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Passively tracks your job applications. Apply like normal — Logged remembers everything.",
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "identity",
+    "downloads"
   ],
+  "oauth2": {
+    "client_id": "280227723945-66j4q14ihri4qe8du36ue9t6dhng9lcb.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -30,9 +36,37 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.indeed.com/*", "*://smartapply.indeed.com/*"],
+      "matches": ["*://*.indeed.com/*", "*://smartapply.indeed.com/*", "*://m5.apply.indeed.com/*"],
       "js": ["content/detectors/indeed.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.greenhouse.io/*"],
+      "js": ["content/detectors/greenhouse.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.lever.co/*"],
+      "js": ["content/detectors/lever.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.myworkdayjobs.com/*"],
+      "js": ["content/detectors/workday.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["content/detectors/universal.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://extensionpay.com/*"],
+      "js": ["ExtPay.js"],
+      "run_at": "document_start"
     }
   ]
 }

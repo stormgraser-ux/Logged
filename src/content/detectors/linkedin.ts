@@ -21,6 +21,7 @@
  */
 
 import { reportDetection, observeDOM, cleanText } from '../detector-base';
+import { parseSalary, extractSalaryFromPage } from '../../shared/salary';
 
 const PLATFORM = 'linkedin';
 let lastDetectedUrl = '';
@@ -103,6 +104,21 @@ function getJobUrl(): string {
   return location.href;
 }
 
+// ── Salary extraction ───────────────────────────────────
+
+function extractLinkedInSalary(): string | null {
+  // LinkedIn shows salary in the job insights section
+  const insightEls = document.querySelectorAll('.job-details-jobs-unified-top-card__job-insight');
+  for (const el of insightEls) {
+    const text = cleanText(el.textContent);
+    if (text && (text.includes('$') || text.toLowerCase().includes('salary'))) {
+      const salary = parseSalary(text);
+      if (salary) return salary;
+    }
+  }
+  return null;
+}
+
 // ── Submission detection ────────────────────────────────
 
 function handleApplicationSubmitted(): void {
@@ -118,6 +134,9 @@ function handleApplicationSubmitted(): void {
   if (url === lastDetectedUrl) return;
   lastDetectedUrl = url;
 
+  // Try LinkedIn-specific salary selectors first, then generic extraction
+  const salary = extractLinkedInSalary() || extractSalaryFromPage();
+
   reportDetection({
     company: jobData.company,
     role: jobData.role,
@@ -125,13 +144,14 @@ function handleApplicationSubmitted(): void {
     sourcePlatform: PLATFORM,
     notes: '',
     detectedBy: 'auto',
+    salary,
   });
 }
 
 // ── Main observer ───────────────────────────────────────
 
 function init(): void {
-  console.log('[Logged] LinkedIn detector initialized');
+  console.warn('[Logged] LinkedIn detector initialized — content script is running');
 
   observeDOM(document.body, (mutations) => {
     // Track SPA navigation

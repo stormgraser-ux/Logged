@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DevOps Engineer at SalaryTest Inc - Careers</title>
+  <meta property="og:site_name" content="SalaryTest Inc">
+  <meta property="og:title" content="DevOps Engineer at SalaryTest Inc">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f9fafb; color: #1f2937; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    .company { color: #6b7280; margin-bottom: 20px; }
+
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #10b981; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .salary-element { background: #ecfdf5; color: #059669; padding: 8px 16px; border-radius: 6px; font-weight: 600; margin: 4px 0; display: inline-block; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+    th { text-align: left; background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
+    td code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+    .format-example { color: #059669; font-weight: 500; }
+    .format-result { color: #2563eb; font-family: monospace; }
+
+    .scenario-list { list-style: none; padding: 0; }
+    .scenario-list li { padding: 8px 0; border-bottom: 1px solid #f3f4f6; display: flex; gap: 12px; align-items: center; }
+    .scenario-label { min-width: 160px; font-size: 13px; color: #6b7280; }
+    .scenario-value { font-weight: 600; }
+    .scenario-btn { font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid #d1d5db; background: white; cursor: pointer; margin-left: auto; }
+    .scenario-btn:hover { background: #f3f4f6; }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>Salary Parsing Test</h3>
+    <p>This page tests salary extraction from various DOM elements and text formats.
+       The universal detector runs on this page (via test harness) and picks up salary from
+       DOM selectors and keyword-based text scanning.</p>
+    <p><strong>Important:</strong> Open this page with <code>?gh_jid=salary-test</code> in the URL so the universal
+       detector activates. Example: <code>http://localhost:8765/test/test-salary.html?gh_jid=salary-test</code></p>
+    <p><strong>Active salary element:</strong> The one with <code>[data-testid="salary"]</code> below will be detected first.
+       Swap it out to test different formats.</p>
+  </div>
+
+  <!-- Job posting with salary -->
+  <h1>DevOps Engineer</h1>
+  <div class="company">SalaryTest Inc &mdash; Remote</div>
+
+  <!-- PRIMARY: This is the salary element the detector will find first -->
+  <div class="salary-element" data-testid="salary" id="activeSalary">$120,000 - $160,000/yr</div>
+
+  <div class="card">
+    <h3>Swap Active Salary Format</h3>
+    <p style="font-size: 13px; color: #666; margin-bottom: 8px">Click a row to change the active salary element and re-trigger detection:</p>
+    <ul class="scenario-list" id="scenarioList"></ul>
+  </div>
+
+  <!-- Confirmation trigger -->
+  <div class="card" style="text-align: center">
+    <button class="test-btn primary" id="triggerBtn">Submit Application (trigger detection)</button>
+    <p style="font-size: 12px; color: #999; margin-top: 8px">Check the harness dashboard below for the detected salary value</p>
+  </div>
+
+  <!-- Reference table -->
+  <div class="card">
+    <h3>Supported Salary Formats</h3>
+    <p style="font-size: 13px; color: #666; margin-bottom: 12px">These are the formats <code>parseSalary()</code> can handle:</p>
+    <table>
+      <thead>
+        <tr><th>Input Format</th><th>Expected Output</th></tr>
+      </thead>
+      <tbody id="formatTable"></tbody>
+    </table>
+  </div>
+
+  <script src="harness.js"></script>
+  <script>
+    // ── Salary test scenarios ────────────────────────────
+    var scenarios = [
+      { label: 'Annual range (full)',     text: '$120,000 - $160,000/yr',     expected: '$120,000 - $160,000/yr' },
+      { label: 'Annual range (K)',        text: '$80K - $100K',               expected: '$80,000 - $100,000' },
+      { label: 'Annual range (k/yr)',     text: '$85k/yr - $110k/yr',         expected: '$85,000 - $110,000/yr' },
+      { label: 'Annual single',           text: '$95,000 per year',           expected: '$95,000/yr' },
+      { label: 'Hourly range',            text: '$25 - $35/hr',              expected: '$25 - $35/hr' },
+      { label: 'Hourly single',           text: '$42/hour',                  expected: '$42/hr' },
+      { label: 'Monthly range',           text: '$6,000 - $8,500/mo',       expected: '$6,000 - $8,500/mo' },
+      { label: 'Large annual',            text: '$180,000 - $250,000 annually', expected: '$180,000 - $250,000/yr' },
+      { label: 'No period',               text: '$70,000 - $90,000',         expected: '$70,000 - $90,000' },
+      { label: 'Indeed-style hourly',      text: '$18 - $22 an hour - Full-time', expected: '$18 - $22/hr' },
+      { label: 'With "salary" keyword',   text: 'Salary: $100,000',         expected: '$100,000/yr' },
+      { label: 'Em dash range',           text: '$90K\u2014$120K',           expected: '$90,000 - $120,000' },
+      { label: 'To separator',            text: '$75,000 to $95,000',        expected: '$75,000 - $95,000' },
+      { label: 'Workday-style',           text: '$120,000.00 - $165,000.00 USD Annual', expected: '$120,000 - $165,000/yr' },
+    ];
+
+    // Build scenario list
+    var list = document.getElementById('scenarioList');
+    scenarios.forEach(function(s, i) {
+      var li = document.createElement('li');
+
+      var label = document.createElement('span');
+      label.className = 'scenario-label';
+      label.textContent = s.label;
+
+      var value = document.createElement('span');
+      value.className = 'scenario-value';
+      value.textContent = s.text;
+
+      var btn = document.createElement('button');
+      btn.className = 'scenario-btn';
+      btn.textContent = 'Use this';
+      btn.addEventListener('click', function() {
+        var el = document.getElementById('activeSalary');
+        el.textContent = s.text;
+        console.log('[Test] Swapped active salary to: ' + s.text);
+      });
+
+      li.appendChild(label);
+      li.appendChild(value);
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+
+    // Build format reference table
+    var table = document.getElementById('formatTable');
+    scenarios.forEach(function(s) {
+      var tr = document.createElement('tr');
+
+      var tdInput = document.createElement('td');
+      var code = document.createElement('code');
+      code.textContent = s.text;
+      tdInput.appendChild(code);
+
+      var tdOutput = document.createElement('td');
+      tdOutput.className = 'format-result';
+      tdOutput.textContent = s.expected;
+
+      tr.appendChild(tdInput);
+      tr.appendChild(tdOutput);
+      table.appendChild(tr);
+    });
+
+    // Trigger detection button
+    document.getElementById('triggerBtn').addEventListener('click', function() {
+      // Inject a confirmation div to trigger the universal detector
+      var div = document.createElement('div');
+      div.textContent = 'Thank you for applying! Your application has been received.';
+      div.style.cssText = 'padding: 16px; background: #d4edda; border-radius: 8px; margin: 12px 0; text-align: center;';
+      this.parentElement.appendChild(div);
+      console.log('[Test] Injected confirmation text — check dashboard for salary detection');
+    });
+  </script>
+  <script>
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Run server from PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/universal.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

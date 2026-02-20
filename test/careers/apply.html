@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Data Entry Specialist - Carvana</title>
+  <meta property="og:site_name" content="Carvana">
+  <meta property="og:title" content="Data Entry Specialist at Carvana">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #00b4d8; }
+    .card { background: #16213e; padding: 20px; border-radius: 8px; margin: 16px 0; }
+    button { padding: 12px 24px; margin: 8px 4px; cursor: pointer; border-radius: 6px; border: none; font-size: 14px; }
+    .primary { background: #00b4d8; color: white; font-size: 16px; }
+    .signal { background: #2a4a6b; color: #ccc; }
+    .status { background: #0a1628; padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 13px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; }
+    .modal { background: white; color: #333; max-width: 420px; margin: 120px auto; padding: 32px; border-radius: 12px; text-align: center; }
+    .modal h2 { color: #333; margin-bottom: 8px; }
+    .modal p { color: #666; }
+    .modal button { background: #00b4d8; color: white; padding: 10px 28px; }
+  </style>
+</head>
+<body>
+  <h1>Universal Detector Test</h1>
+  <p>Simulates <strong>carvana.com/careers/apply?gh_jid=...</strong></p>
+  <p>Check that <code>?gh_jid=123</code> is in the URL bar. If you see it, the universal detector should have activated.</p>
+
+  <div class="card">
+    <h3>Step 1: Check console</h3>
+    <div class="status" id="scriptStatus">Open DevTools (F12) → Console. Look for:<br>[Logged] Universal detector v0.4 activated</div>
+  </div>
+
+  <div class="card">
+    <h3>Step 2: Simulate application form</h3>
+    <p>Pretend this is the Carvana application form.</p>
+    <form id="applyForm">
+      <input type="text" placeholder="Full name" value="Test User" style="display:block; margin: 6px 0; padding: 8px; width: 300px; background: #0a1628; border: 1px solid #2a4a6b; color: #e0e0e0; border-radius: 4px;">
+      <input type="email" placeholder="Email" value="test@test.com" style="display:block; margin: 6px 0; padding: 8px; width: 300px; background: #0a1628; border: 1px solid #2a4a6b; color: #e0e0e0; border-radius: 4px;">
+      <button type="submit" class="primary">SUBMIT APPLICATION</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Step 3: Show confirmation</h3>
+    <p>After clicking Submit, click this to show the "Thank you" modal (like Carvana does).</p>
+    <button class="signal" onclick="showConfirmation()">Show "Thank you for applying" modal</button>
+  </div>
+
+  <div class="card">
+    <h3>Step 4: Check popup</h3>
+    <p>Open the Logged extension popup. You should see a new application: <strong>Carvana — Data Entry Specialist</strong> (detected via greenhouse).</p>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2>Thank you for applying!</h2>
+      <p>Your application has been received.</p>
+      <p>If there is a fit, someone will be getting back to you.</p>
+      <button onclick="document.getElementById('modalOverlay').style.display='none'">RETURN TO JOBS</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('applyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      console.log('[Test] Form submitted — detector should set pendingSubmission');
+    });
+
+    function showConfirmation() {
+      document.getElementById('modalOverlay').style.display = 'block';
+      console.log('[Test] Confirmation modal shown — detector should fire now');
+    }
+  </script>
+</body>
+</html>

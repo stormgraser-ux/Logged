@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Acme Corp - Software Engineer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #fff; margin: 0; padding: 20px; color: #333; }
+    .content { max-width: 750px; margin: 0 auto; }
+
+    /* Lever selectors (REAL selectors the detector looks for) */
+    .posting-headline h2 { font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+    .posting-categories { color: #888; font-size: 14px; margin-bottom: 16px; }
+    .posting-description { line-height: 1.6; }
+
+    .card { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #5b2c8e; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+    .test-btn.primary:hover { background: #3d1a61; }
+
+    .signal-container > div { padding: 12px 16px; background: #d4edda; border-radius: 6px; margin: 6px 0; }
+
+    /* Apply form */
+    .apply-form { margin-top: 20px; }
+    .apply-form input { display: block; margin: 6px 0; padding: 10px 12px; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <div class="test-controls">
+      <h3>Lever Detector Test</h3>
+      <p>Simulates a Lever job listing. Lever does NOT redirect after submission — it swaps content in-place.
+         The detector watches for form submissions + confirmation DOM elements.</p>
+      <p><strong>Flow:</strong> Click "Submit application" (triggers form submit listener) &rarr; Click a confirmation signal</p>
+    </div>
+
+    <!-- Simulated Lever job page with REAL selectors -->
+    <div class="card">
+      <div class="posting-headline">
+        <h2>Software Engineer</h2>
+      </div>
+      <div class="posting-categories">
+        Engineering / San Francisco, CA / Full-time
+      </div>
+      <div class="posting-description">
+        <p>Join Acme Corp's engineering team! We're building the next generation of developer tools. As a Software Engineer, you'll design and implement core platform features used by thousands of developers.</p>
+        <h4>What you'll do</h4>
+        <ul>
+          <li>Build and maintain scalable backend services</li>
+          <li>Collaborate with product and design teams</li>
+          <li>Participate in code reviews and architectural discussions</li>
+        </ul>
+        <p><strong>Salary:</strong> $140,000 - $180,000/yr plus equity</p>
+      </div>
+    </div>
+
+    <!-- Apply form with REAL Lever selectors -->
+    <div class="card">
+      <h3>Apply for this job</h3>
+      <form id="applyForm" class="apply-form">
+        <input type="text" placeholder="Full name" value="Test User">
+        <input type="email" placeholder="Email" value="test@example.com">
+        <input type="text" placeholder="Phone" value="555-0123">
+        <input type="url" placeholder="LinkedIn URL" value="https://linkedin.com/in/testuser">
+        <div style="margin-top: 12px">
+          <button type="submit" class="test-btn primary postings-btn" data-qa="btn-submit">Submit application</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Confirmation signal controls -->
+    <div class="test-controls">
+      <h3>Trigger Confirmation Signals</h3>
+      <p>After submitting the form, click one of these to simulate Lever's in-place content swap:</p>
+      <button class="test-btn" onclick="simulateConfirmationClass()">Add .application-confirmation</button>
+      <button class="test-btn" onclick="simulateDataQa()">Add [data-qa="msg-submit-success"]</button>
+      <button class="test-btn" onclick="simulatePostingConfirm()">Add .posting-apply-confirmation</button>
+      <button class="test-btn" onclick="simulateText('Thanks for applying! We look forward to reviewing your application.')">
+        "thanks for applying" text
+      </button>
+      <button class="test-btn" onclick="simulateText('Your application has been submitted. We will be in touch soon.')">
+        "application has been submitted" text
+      </button>
+    </div>
+
+    <div class="signal-container" id="signalContainer"></div>
+  </div>
+
+  <script src="harness.js"></script>
+  <script>
+    // Prevent actual form submission
+    document.getElementById('applyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      console.log('[Test] Form submitted! Detector should have set pendingSubmission flag.');
+    });
+
+    function simulateConfirmationClass() {
+      var div = document.createElement('div');
+      div.className = 'application-confirmation';
+      div.textContent = 'Your application has been submitted!';
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added .application-confirmation');
+    }
+
+    function simulateDataQa() {
+      var div = document.createElement('div');
+      div.setAttribute('data-qa', 'msg-submit-success');
+      div.textContent = 'Thanks for applying! We will review your application.';
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added [data-qa="msg-submit-success"]');
+    }
+
+    function simulatePostingConfirm() {
+      var div = document.createElement('div');
+      div.className = 'posting-apply-confirmation';
+      div.textContent = 'Application received! Thank you for your interest.';
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added .posting-apply-confirmation');
+    }
+
+    function simulateText(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added text: "' + text.slice(0, 50) + '..."');
+    }
+  </script>
+  <script>
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Run server from PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/lever.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Caregiver - Sunrise Senior Living - Eugene, OR | Indeed.com</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 0; color: #2d2d2d; }
+    .page-header { background: #2557a7; color: white; padding: 10px 20px; font-size: 14px; }
+    .page-header span { opacity: 0.7; float: right; }
+    .content { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+
+    /* Indeed job detail selectors (REAL selectors the detector looks for) */
+    .jobsearch-JobInfoHeader-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .jobTitle { font-size: 24px; font-weight: 700; }
+    #salaryInfoAndJobType { color: #2d2d2d; font-size: 16px; margin: 8px 0; }
+    #jobDescriptionText { line-height: 1.6; margin: 16px 0; }
+
+    .card { background: white; border-radius: 8px; border: 1px solid #e4e4e4; padding: 20px; margin-bottom: 12px; }
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #2557a7; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+    .test-btn.primary:hover { background: #1a3d7c; }
+
+    .signal-container > div { padding: 12px 16px; background: #d4edda; border-radius: 6px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    Indeed <span>Test Page — Not Real Indeed</span>
+  </div>
+
+  <div class="content">
+    <div class="test-controls">
+      <h3>Indeed Detector Test (Main Page)</h3>
+      <p>Simulates the Indeed job detail page. The detector caches job data on load, watches for Apply clicks, then checks for completion signals.</p>
+      <p><strong>Flow:</strong> Page loads (cache) &rarr; Click "Apply now" (set pending) &rarr; Click a completion signal (detect)</p>
+    </div>
+
+    <!-- Simulated Indeed job detail with REAL selectors -->
+    <div class="card">
+      <div data-testid="jobsearch-JobInfoHeader-title">
+        <h1 class="jobTitle">Caregiver</h1>
+      </div>
+      <div data-testid="inlineHeader-companyName">
+        <a>Sunrise Senior Living</a>
+      </div>
+      <div data-testid="text-location">Eugene, OR</div>
+      <div id="salaryInfoAndJobType">$18 - $22 an hour - Full-time</div>
+    </div>
+
+    <div class="card">
+      <div id="jobDescriptionText">
+        <h3>Job Description</h3>
+        <p>Sunrise Senior Living is seeking a compassionate Caregiver to provide personalized care to our residents. We offer competitive pay of $18-$22/hr depending on experience.</p>
+        <h4>Responsibilities:</h4>
+        <ul>
+          <li>Assist residents with activities of daily living</li>
+          <li>Monitor and report changes in resident conditions</li>
+          <li>Maintain a safe and clean environment</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Apply button (REAL selector the detector listens for clicks on) -->
+    <div class="card" style="text-align: center;">
+      <button class="test-btn primary" id="indeedApplyButton">Apply now</button>
+      <p style="font-size: 12px; color: #999; margin-top: 8px">The detector watches for clicks on #indeedApplyButton</p>
+    </div>
+
+    <!-- Completion signal controls -->
+    <div class="test-controls">
+      <h3>Trigger Completion Signals</h3>
+      <p>After clicking "Apply now" above, click one of these to simulate Indeed showing an "applied" indicator:</p>
+      <button class="test-btn" onclick="simulateHasApplied()">Add .ia-HasApplied-bodyTop</button>
+      <button class="test-btn" onclick="simulateThankYou()">Add .ia-ThankYou</button>
+      <button class="test-btn" onclick="simulatePostApply()">Add .ia-PostApply</button>
+      <button class="test-btn" onclick="simulateAppliedSnippet()">Add [data-testid="applied-snippet"]</button>
+      <button class="test-btn" onclick="simulateHeadingText()">Add "Application submitted" heading</button>
+    </div>
+
+    <div class="signal-container" id="signalContainer"></div>
+  </div>
+
+  <script src="harness.js"></script>
+  <script>
+    function addSignal(el) {
+      document.getElementById('signalContainer').appendChild(el);
+    }
+
+    function simulateHasApplied() {
+      var div = document.createElement('div');
+      div.className = 'ia-HasApplied-bodyTop';
+      var h1 = document.createElement('h1');
+      h1.textContent = "You've applied to this job";
+      div.appendChild(h1);
+      addSignal(div);
+      console.log('[Test] Added .ia-HasApplied-bodyTop');
+    }
+
+    function simulateThankYou() {
+      var div = document.createElement('div');
+      div.className = 'ia-ThankYou';
+      div.textContent = 'Thank you for applying!';
+      addSignal(div);
+      console.log('[Test] Added .ia-ThankYou');
+    }
+
+    function simulatePostApply() {
+      var div = document.createElement('div');
+      div.className = 'ia-PostApply';
+      div.textContent = 'Your application has been submitted!';
+      addSignal(div);
+      console.log('[Test] Added .ia-PostApply');
+    }
+
+    function simulateAppliedSnippet() {
+      var div = document.createElement('div');
+      div.setAttribute('data-testid', 'applied-snippet');
+      div.textContent = 'Applied';
+      addSignal(div);
+      console.log('[Test] Added [data-testid="applied-snippet"]');
+    }
+
+    function simulateHeadingText() {
+      var div = document.createElement('div');
+      div.className = 'ia-BasePage-heading';
+      div.textContent = 'Application submitted';
+      addSignal(div);
+      console.log('[Test] Added .ia-BasePage-heading with "Application submitted"');
+    }
+  </script>
+  <script>
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Run server from PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/indeed.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

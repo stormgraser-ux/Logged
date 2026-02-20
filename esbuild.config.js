@@ -36,6 +36,12 @@ function copyStaticFiles() {
     path.join(popupDir, 'popup.css'),
     path.join(distDir, 'popup.css')
   );
+
+  // Copy ExtPay.js (content script for extensionpay.com payment callbacks)
+  const extPaySrc = path.resolve(__dirname, 'node_modules/extpay/dist/ExtPay.js');
+  if (fs.existsSync(extPaySrc)) {
+    fs.copyFileSync(extPaySrc, path.join(distDir, 'ExtPay.js'));
+  }
 }
 
 const buildOptions = {
@@ -44,6 +50,10 @@ const buildOptions = {
     'src/popup/popup.ts',
     'src/content/detectors/linkedin.ts',
     'src/content/detectors/indeed.ts',
+    'src/content/detectors/greenhouse.ts',
+    'src/content/detectors/lever.ts',
+    'src/content/detectors/workday.ts',
+    'src/content/detectors/universal.ts',
   ],
   bundle: true,
   outdir: 'dist',

@@ -29,4 +29,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 export const STORAGE_KEYS = {
   APPLICATIONS: 'logged_applications',
   SETTINGS: 'logged_settings',
+  SUBSCRIPTION: 'logged_subscription',
+  GMAIL_CONNECTED: 'logged_gmail_connected',
+  GMAIL_LAST_CHECK: 'logged_gmail_last_check',
 } as const;

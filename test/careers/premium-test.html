@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Senior Software Engineer at TestCorp - Careers</title>
+  <meta property="og:site_name" content="TestCorp">
+  <meta property="og:title" content="Senior Software Engineer at TestCorp">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background: #f9fafb; color: #1f2937; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    .company { color: #6b7280; margin-bottom: 20px; }
+    .salary { background: #ecfdf5; color: #059669; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-bottom: 20px; display: inline-block; }
+    .description { line-height: 1.6; margin-bottom: 30px; }
+    .apply-btn { background: #3b82f6; color: white; border: none; padding: 12px 32px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .apply-btn:hover { background: #2563eb; }
+    .confirmation { display: none; background: #ecfdf5; border: 1px solid #86efac; padding: 24px; border-radius: 12px; text-align: center; margin-top: 20px; }
+    .confirmation h2 { color: #059669; margin-bottom: 8px; }
+    .info { background: #eff6ff; border: 1px solid #93c5fd; padding: 16px; border-radius: 8px; margin-top: 30px; font-size: 14px; }
+    .info h3 { font-size: 14px; margin-bottom: 8px; color: #1d4ed8; }
+    .info ul { margin: 0; padding-left: 20px; }
+    .info li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Senior Software Engineer</h1>
+  <div class="company">TestCorp &mdash; Remote</div>
+  <div class="salary" data-testid="salary">$120,000 - $160,000/yr</div>
+
+  <div class="description">
+    <p><strong>About the Role</strong></p>
+    <p>We're looking for a Senior Software Engineer to join our platform team. You'll work on distributed systems, API design, and developer tooling.</p>
+    <p><strong>Compensation:</strong> Base salary range: $120,000 - $160,000 per year, plus equity and benefits.</p>
+  </div>
+
+  <button class="apply-btn" id="applyBtn">Submit Application</button>
+
+  <div class="confirmation" id="confirmation">
+    <h2>Thank you for applying!</h2>
+    <p>Your application for Senior Software Engineer at TestCorp has been received.</p>
+    <p>We'll be in touch within 5-7 business days.</p>
+  </div>
+
+  <div class="info">
+    <h3>Test Page Instructions</h3>
+    <ul>
+      <li>This page simulates a career site with Greenhouse URL params</li>
+      <li>Open via: <code>http://localhost:8765/careers/premium-test.html?gh_jid=456</code></li>
+      <li>The universal detector should activate (career path + ATS params)</li>
+      <li>Click "Submit Application" to trigger the completion signal</li>
+      <li><strong>Salary:</strong> Should extract "$120,000 - $160,000/yr" from the salary element</li>
+      <li><strong>Pro users:</strong> Salary appears in green in the popup</li>
+      <li><strong>Free users:</strong> "Salary (Pro)" locked indicator appears</li>
+    </ul>
+  </div>
+
+  <script>
+    document.getElementById('applyBtn').addEventListener('click', function() {
+      this.style.display = 'none';
+      document.getElementById('confirmation').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

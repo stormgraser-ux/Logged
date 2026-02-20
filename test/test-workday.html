@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Software Engineer - Acme Corp</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }
+    .content { max-width: 750px; margin: 0 auto; }
+
+    .card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #0875e1; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+    .test-btn.primary:hover { background: #065bb5; }
+
+    .signal-container > div { padding: 12px 16px; background: #d4edda; border-radius: 6px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <div class="test-controls">
+      <h3>Workday Detector Test</h3>
+      <p>Simulates Workday's DOM using <code>data-automation-id</code> attributes (Workday's most stable pattern).
+         CSS class names are React-generated and unreliable, so the detector relies on these attributes.</p>
+      <p><strong>Flow:</strong> Page loads (cache from data-automation-id) &rarr; Click "Submit" &rarr; Click a completion signal</p>
+      <p><strong>Note:</strong> In production, the company name comes from the subdomain (e.g. <code>acme.wd5.myworkdayjobs.com</code>).
+         Since we're on localhost, the detector falls back to document.title parsing.</p>
+    </div>
+
+    <!-- Simulated Workday job page with REAL data-automation-id attributes -->
+    <div class="card">
+      <h2 data-automation-id="jobPostingHeader">Software Engineer</h2>
+      <div data-automation-id="jobPostingLocation">San Francisco, CA</div>
+      <div data-automation-id="salary" style="margin: 8px 0; color: #059669; font-weight: 600;">
+        $120,000.00 - $165,000.00 USD Annual
+      </div>
+      <div data-automation-id="jobPostingDescription" style="margin-top: 16px; line-height: 1.6;">
+        <p>At Acme Corp, we build world-class enterprise software. As a Software Engineer, you'll design and develop features for our core platform serving Fortune 500 companies.</p>
+        <h4>Responsibilities</h4>
+        <ul>
+          <li>Design and implement scalable backend services</li>
+          <li>Write clean, maintainable code with comprehensive tests</li>
+          <li>Collaborate across teams to deliver product features</li>
+        </ul>
+        <h4>Qualifications</h4>
+        <ul>
+          <li>Bachelor's degree in Computer Science or equivalent</li>
+          <li>3+ years of professional development experience</li>
+          <li>Experience with Java, Python, or Go</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Submit button with REAL Workday data-automation-id -->
+    <div class="card" style="text-align: center;">
+      <button class="test-btn primary" data-automation-id="submit">Submit</button>
+      <p style="font-size: 12px; color: #999; margin-top: 8px">Click to set pendingSubmission flag (the text must include "submit")</p>
+    </div>
+
+    <!-- Completion signal controls -->
+    <div class="test-controls">
+      <h3>Trigger Completion Signals</h3>
+      <p>After clicking Submit, use these to simulate Workday's success indicators:</p>
+
+      <div style="margin-bottom: 8px"><strong>data-automation-id signals (strongest):</strong></div>
+      <button class="test-btn" onclick="addAutomationSignal('successMessage', 'Your application was submitted successfully!')">
+        data-automation-id="successMessage"
+      </button>
+      <button class="test-btn" onclick="addAutomationSignal('confirmationMessage', 'Application confirmed.')">
+        data-automation-id="confirmationMessage"
+      </button>
+      <button class="test-btn" onclick="addAutomationSignal('thankYouMessage', 'Thank you for your application!')">
+        data-automation-id="thankYouMessage"
+      </button>
+
+      <div style="margin: 12px 0 8px"><strong>Text-based signals (require pending flag):</strong></div>
+      <button class="test-btn" onclick="addTextSignal('Your application has been submitted. You will hear from us soon.')">
+        "application has been submitted"
+      </button>
+      <button class="test-btn" onclick="addTextSignal('Application complete! Thank you for your interest in Acme Corp.')">
+        "application complete"
+      </button>
+      <button class="test-btn" onclick="addTextSignal('Thank you for your application. We will review it and be in touch.')">
+        "thank you for your application"
+      </button>
+    </div>
+
+    <div class="signal-container" id="signalContainer"></div>
+  </div>
+
+  <script src="harness.js"></script>
+  <script>
+    function addAutomationSignal(id, text) {
+      var div = document.createElement('div');
+      div.setAttribute('data-automation-id', id);
+      div.textContent = text;
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added data-automation-id="' + id + '"');
+    }
+
+    function addTextSignal(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      document.getElementById('signalContainer').appendChild(div);
+      console.log('[Test] Added text: "' + text.slice(0, 50) + '..."');
+    }
+  </script>
+  <script>
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Run server from PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/workday.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

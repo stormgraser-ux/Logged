@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Senior Frontend Engineer at Stripe | LinkedIn</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #f3f2ef; margin: 0; padding: 20px; color: #000; }
+    .page-header { background: #1b1f23; color: white; padding: 8px 20px; margin: -20px -20px 20px; font-size: 13px; }
+    .page-header a { color: #70b5f9; text-decoration: none; margin-right: 16px; }
+    .layout { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 12px; }
+    .sidebar .card { padding: 16px; }
+
+    /* LinkedIn job card selectors (the actual selectors the detector looks for) */
+    .job-details-jobs-unified-top-card__job-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .job-details-jobs-unified-top-card__job-title a { color: #000; text-decoration: none; }
+    .job-details-jobs-unified-top-card__company-name { font-size: 16px; margin-bottom: 4px; }
+    .job-details-jobs-unified-top-card__company-name a { color: #0a66c2; text-decoration: none; }
+    .job-details-jobs-unified-top-card__job-insight { color: #666; font-size: 14px; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .job-details-jobs-unified-top-card__job-insight:last-child { border-bottom: none; }
+
+    .test-controls { background: #fff8e1; border: 2px solid #ffca28; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .test-controls h3 { margin: 0 0 8px; font-size: 15px; color: #e65100; }
+    .test-controls p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .test-btn { padding: 8px 16px; margin: 3px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; }
+    .test-btn:hover { background: #f5f5f5; }
+    .test-btn.primary { background: #0a66c2; color: white; border: none; font-size: 15px; padding: 10px 24px; }
+    .test-btn.primary:hover { background: #004182; }
+
+    /* LinkedIn modal (the actual element the detector watches for) */
+    .artdeco-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; }
+    .artdeco-modal { background: white; max-width: 480px; margin: 100px auto; border-radius: 8px; padding: 32px; text-align: center; }
+    .artdeco-modal h2 { margin-bottom: 8px; font-size: 20px; }
+    .artdeco-modal p { color: #666; margin-bottom: 16px; }
+
+    /* Toast (secondary signal) */
+    .artdeco-toasts { position: fixed; bottom: 320px; left: 20px; z-index: 1001; }
+    .artdeco-toast-item { background: #057642; color: white; padding: 12px 20px; border-radius: 4px; font-size: 14px; display: none; animation: toast-in 0.3s ease; }
+    @keyframes toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+  <!-- Simulated LinkedIn nav -->
+  <div class="page-header">
+    <a href="#">Home</a> <a href="#">Jobs</a> <a href="#">Messaging</a>
+    <span style="float:right; opacity: 0.6">Test Page — Not Real LinkedIn</span>
+  </div>
+
+  <div class="layout">
+    <div class="main">
+      <!-- Test Controls -->
+      <div class="test-controls">
+        <h3>LinkedIn Detector Test</h3>
+        <p>This page simulates LinkedIn's DOM. The detector script is loaded via test harness.</p>
+        <p>On page load, the detector should <strong>cache job data</strong> (yellow row in dashboard below).</p>
+        <p>Click a signal button to trigger <strong>application detection</strong> (green banner in dashboard).</p>
+        <div style="margin-top: 12px">
+          <strong>Trigger detection:</strong><br>
+          <button class="test-btn primary" onclick="showPostApplyModal()">Show #post-apply-modal (Primary Signal)</button><br>
+          <button class="test-btn" onclick="showToast()">Show success toast (Secondary Signal)</button>
+        </div>
+      </div>
+
+      <!-- Simulated job card with REAL LinkedIn selectors -->
+      <div class="card">
+        <div class="job-details-jobs-unified-top-card__job-title">
+          <a href="/jobs/view/3847291">Senior Frontend Engineer</a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__company-name">
+          <a href="/company/stripe">Stripe</a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__job-insight">San Francisco, CA (Hybrid)</div>
+        <div class="job-details-jobs-unified-top-card__job-insight">$180,000/yr - $250,000/yr</div>
+        <div class="job-details-jobs-unified-top-card__job-insight">Posted 3 days ago · 127 applicants</div>
+      </div>
+
+      <!-- Job description -->
+      <div class="card">
+        <h3>About the job</h3>
+        <p>We're looking for a Senior Frontend Engineer to help build Stripe's next-generation payment platform. You'll work with React, TypeScript, and our internal design system to create beautiful, accessible interfaces that millions of businesses rely on.</p>
+        <h4 style="margin-top: 16px">Requirements</h4>
+        <ul>
+          <li>5+ years of frontend engineering experience</li>
+          <li>Strong TypeScript and React skills</li>
+          <li>Experience with design systems</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="card">
+        <h4>About the company</h4>
+        <p style="font-size: 14px; color: #666">Stripe is a financial infrastructure platform for businesses.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LinkedIn post-apply modal (PRIMARY detection signal) -->
+  <div class="artdeco-modal-overlay" id="modalOverlay">
+    <div class="artdeco-modal">
+      <h2 id="post-apply-modal">Your application was sent!</h2>
+      <p>You applied for Senior Frontend Engineer at Stripe</p>
+      <button class="test-btn primary" onclick="document.getElementById('modalOverlay').style.display='none'">Done</button>
+    </div>
+  </div>
+
+  <!-- LinkedIn toast container (SECONDARY detection signal) -->
+  <div class="artdeco-toasts" id="toastContainer"></div>
+
+  <script src="harness.js"></script>
+  <script>
+    function showPostApplyModal() {
+      // The detector watches for h2#post-apply-modal being added to the DOM
+      // We simulate this by showing the overlay (element already exists but hidden)
+      // To trigger MutationObserver properly, we need to ADD the element dynamically
+      var overlay = document.getElementById('modalOverlay');
+      overlay.style.display = 'block';
+
+      // Create a fresh h2#post-apply-modal and append it to trigger MutationObserver
+      var h2 = document.createElement('h2');
+      h2.id = 'post-apply-modal';
+      h2.textContent = 'Your application was sent!';
+      overlay.querySelector('.artdeco-modal').insertBefore(h2, overlay.querySelector('.artdeco-modal').firstChild);
+      console.log('[Test] Injected h2#post-apply-modal — detector should fire');
+    }
+
+    function showToast() {
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'artdeco-toast-item';
+      toast.textContent = 'Your application was sent to Stripe.';
+      toast.style.display = 'block';
+      container.appendChild(toast);
+      console.log('[Test] Injected .artdeco-toast-item with "application sent" text');
+      setTimeout(function() { toast.remove(); }, 5000);
+    }
+  </script>
+  <script>
+    // Verify detector loads — if not, show a clear error
+    window.__detectorLoaded = false;
+    setTimeout(function() {
+      if (!window.__detectorLoaded) {
+        var body = document.getElementById('dashBody');
+        if (body) {
+          var err = document.createElement('div');
+          err.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';
+          err.textContent = 'ERROR: Detector script failed to load. Make sure you run the server from the PROJECT ROOT: cd ~/workspace/projects/Logged && python3 -m http.server 8765';
+          body.appendChild(err);
+        }
+      }
+    }, 2000);
+  </script>
+  <script src="/dist/content/detectors/linkedin.js" onerror="
+    var d=document.getElementById('dashBody');
+    if(d){var e=document.createElement('div');e.style.cssText='background:#7f1d1d;color:#fca5a5;padding:10px 16px;border-radius:6px;margin:6px 0;';e.textContent='SCRIPT LOAD FAILED: /dist/content/detectors/linkedin.js — Run server from project root: cd ~/workspace/projects/Logged && python3 -m http.server 8765';d.appendChild(e);}
+  "></script>
+  <script>window.__detectorLoaded = true;</script>
+</body>
+</html>

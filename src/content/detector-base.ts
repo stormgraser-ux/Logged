@@ -14,6 +14,7 @@ export interface DetectedApplication {
   sourcePlatform: string;
   notes: string;
   detectedBy: 'auto';
+  salary?: string | null;
 }
 
 /** Send a detected application to the background service worker */

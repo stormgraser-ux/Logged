@@ -1,14 +1,21 @@
 import type { Application, ApplicationStatus, Message } from '../shared/types';
+import type { SubscriptionState } from '../shared/subscription';
+import type { GmailStatus } from '../background/gmail';
 import { STATUS_LABELS, STATUS_ORDER } from '../shared/constants';
+import { DEFAULT_SUBSCRIPTION, isFeatureUnlocked } from '../shared/subscription';
+import { computeAnalytics } from './analytics';
+import { exportToCSV } from './csv-export';
 
-// ── State ────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────
 
 let applications: Application[] = [];
 let activeFilter: ApplicationStatus | 'all' = 'all';
 let searchQuery = '';
 let editingId: string | null = null;
+let activeView: 'list' | 'stats' = 'list';
+let subscription: SubscriptionState = { ...DEFAULT_SUBSCRIPTION };
 
-// ── DOM refs ─────────────────────────────────────────────
+// ── DOM refs ─────────────────────────────────────────
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -20,6 +27,33 @@ const addToggle = $<HTMLButtonElement>('addToggle');
 const addForm = $<HTMLFormElement>('addForm');
 const cancelAdd = $<HTMLButtonElement>('cancelAdd');
 const statusFilters = $<HTMLDivElement>('statusFilters');
+const viewTabs = $<HTMLDivElement>('viewTabs');
+
+// Pro elements
+const proBadge = $<HTMLSpanElement>('proBadge');
+const exportBtn = $<HTMLButtonElement>('exportBtn');
+const settingsBtn = $<HTMLButtonElement>('settingsBtn');
+const settingsOverlay = $<HTMLDivElement>('settingsOverlay');
+const settingsClose = $<HTMLButtonElement>('settingsClose');
+const upgradeBanner = $<HTMLDivElement>('upgradeBanner');
+const upgradeBannerBtn = $<HTMLButtonElement>('upgradeBannerBtn');
+
+// Analytics
+const listContainer = $<HTMLDivElement>('listContainer');
+const analyticsContainer = $<HTMLDivElement>('analyticsContainer');
+const analyticsUpgrade = $<HTMLDivElement>('analyticsUpgrade');
+const analyticsUpgradeBtn = $<HTMLButtonElement>('analyticsUpgradeBtn');
+const analyticsContent = $<HTMLDivElement>('analyticsContent');
+
+// Gmail settings
+const gmailDot = $<HTMLSpanElement>('gmailDot');
+const gmailStatusText = $<HTMLSpanElement>('gmailStatusText');
+const gmailConnectBtn = $<HTMLButtonElement>('gmailConnectBtn');
+const gmailDisconnectBtn = $<HTMLButtonElement>('gmailDisconnectBtn');
+const gmailCheckNowBtn = $<HTMLButtonElement>('gmailCheckNowBtn');
+const gmailLastCheck = $<HTMLParagraphElement>('gmailLastCheck');
+const subscriptionInfo = $<HTMLDivElement>('subscriptionInfo');
+const upgradeBtn = $<HTMLButtonElement>('upgradeBtn');
 
 // Form inputs
 const inputCompany = $<HTMLInputElement>('inputCompany');
@@ -28,13 +62,13 @@ const inputUrl = $<HTMLInputElement>('inputUrl');
 const inputDate = $<HTMLInputElement>('inputDate');
 const inputNotes = $<HTMLInputElement>('inputNotes');
 
-// ── Messaging ────────────────────────────────────────────
+// ── Messaging ────────────────────────────────────────
 
 function send(message: Message): Promise<unknown> {
   return chrome.runtime.sendMessage(message);
 }
 
-// ── DOM helpers ──────────────────────────────────────────
+// ── DOM helpers ──────────────────────────────────────
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -83,7 +117,7 @@ function svgIcon(pathD: string, size = 14): SVGSVGElement {
   return svg;
 }
 
-// ── Render ───────────────────────────────────────────────
+// ── Render ───────────────────────────────────────────
 
 function getFilteredApps(): Application[] {
   let filtered = applications;
@@ -227,6 +261,20 @@ function buildAppItem(app: Application): HTMLLIElement {
     metaChildren.push(el('span', { className: 'app-followup' }, 'Follow up?'));
   }
 
+  // Salary display (gated)
+  if (app.salary) {
+    if (isFeatureUnlocked(subscription, 'salary_detection')) {
+      metaChildren.push(el('span', { className: 'app-salary' }, app.salary));
+    } else {
+      const locked = el('span', { className: 'app-salary-locked' }, 'Salary (Pro)');
+      locked.addEventListener('click', (e) => {
+        e.stopPropagation();
+        send({ type: 'OPEN_PAYMENT_PAGE' });
+      });
+      metaChildren.push(locked);
+    }
+  }
+
   if (app.notes) {
     metaChildren.push(el('span', { className: 'app-note-preview' }, app.notes));
   }
@@ -273,11 +321,18 @@ function buildAppItem(app: Application): HTMLLIElement {
   return li;
 }
 
+function getFollowUpCount(): number {
+  return applications.filter(a => a.status === 'applied' && getDaysSinceApplied(a.dateApplied) >= 7).length;
+}
+
 function renderList() {
   const filtered = getFilteredApps();
 
-  // Update count
-  appCount.textContent = `${applications.length} tracked`;
+  // Update count with follow-up info
+  const followUpCount = getFollowUpCount();
+  appCount.textContent = followUpCount > 0
+    ? `${applications.length} tracked \u00b7 ${followUpCount} need follow-up`
+    : `${applications.length} tracked`;
 
   // Clear the list
   appList.replaceChildren();
@@ -307,7 +362,169 @@ function renderList() {
   appList.appendChild(fragment);
 }
 
-// ── Event handlers ───────────────────────────────────────
+// ── Analytics rendering ─────────────────────────────
+
+function renderAnalytics() {
+  const data = computeAnalytics(applications);
+  analyticsContent.replaceChildren();
+
+  // Velocity card
+  const velocityCard = el('div', { className: 'stat-card' });
+  const velocityHeader = el('div', { className: 'stat-card-header' });
+  velocityHeader.appendChild(el('span', { className: 'stat-card-title' }, 'Application Velocity'));
+  velocityHeader.appendChild(el('span', { className: 'stat-card-value' }, `${data.thisWeek}/wk`));
+  velocityCard.appendChild(velocityHeader);
+
+  // Trend
+  if (data.lastWeek > 0 || data.thisWeek > 0) {
+    const trendClass = data.velocityTrend >= 0 ? 'stat-trend-up' : 'stat-trend-down';
+    const arrow = data.velocityTrend >= 0 ? '\u2191' : '\u2193';
+    velocityCard.appendChild(el('div', { className: `stat-card-sub ${trendClass}` },
+      `${arrow} ${Math.abs(data.velocityTrend)}% vs last week`));
+  }
+
+  // Bar chart
+  const maxCount = Math.max(...data.weeklyVelocity.map(w => w.count), 1);
+  const barChart = el('div', { className: 'bar-chart' });
+  for (const week of data.weeklyVelocity) {
+    const col = el('div', { className: 'bar-chart-col' });
+    const bar = el('div', { className: 'bar-chart-bar' });
+    bar.style.height = `${Math.max((week.count / maxCount) * 100, 5)}%`;
+    col.appendChild(bar);
+    col.appendChild(el('span', { className: 'bar-chart-label' }, week.weekLabel));
+    barChart.appendChild(col);
+  }
+  velocityCard.appendChild(barChart);
+  analyticsContent.appendChild(velocityCard);
+
+  // Response rate card
+  const responseCard = el('div', { className: 'stat-card' });
+  const respHeader = el('div', { className: 'stat-card-header' });
+  respHeader.appendChild(el('span', { className: 'stat-card-title' }, 'Response Rate'));
+  respHeader.appendChild(el('span', { className: 'stat-card-value' }, `${data.responseRate}%`));
+  responseCard.appendChild(respHeader);
+  responseCard.appendChild(el('div', { className: 'stat-card-sub' },
+    `${data.responseRate}% got a response`));
+  const progressBar = el('div', { className: 'progress-bar' });
+  const progressFill = el('div', { className: 'progress-bar-fill blue' });
+  progressFill.style.width = `${data.responseRate}%`;
+  progressBar.appendChild(progressFill);
+  responseCard.appendChild(progressBar);
+  analyticsContent.appendChild(responseCard);
+
+  // Source effectiveness card
+  if (data.platformBreakdown.length > 0) {
+    const sourceCard = el('div', { className: 'stat-card' });
+    sourceCard.appendChild(el('div', { className: 'stat-card-title' }, 'Source Effectiveness'));
+    for (const plat of data.platformBreakdown) {
+      const row = el('div', { className: 'platform-row' });
+      row.appendChild(el('span', { className: 'platform-name' }, plat.platform));
+      row.appendChild(el('span', { className: 'platform-count' }, `${plat.count} apps`));
+      row.appendChild(el('span', { className: 'platform-rate' }, `${plat.responseRate}% resp`));
+      sourceCard.appendChild(row);
+    }
+    analyticsContent.appendChild(sourceCard);
+  }
+
+  // Avg days to response
+  if (data.avgDaysToResponse !== null) {
+    const avgCard = el('div', { className: 'stat-card' });
+    const avgHeader = el('div', { className: 'stat-card-header' });
+    avgHeader.appendChild(el('span', { className: 'stat-card-title' }, 'Avg. Days to Response'));
+    avgHeader.appendChild(el('span', { className: 'stat-card-value' }, String(data.avgDaysToResponse)));
+    avgCard.appendChild(avgHeader);
+    analyticsContent.appendChild(avgCard);
+  }
+}
+
+// ── View switching ──────────────────────────────────
+
+function switchView(view: 'list' | 'stats') {
+  activeView = view;
+
+  // Update tab buttons
+  viewTabs.querySelectorAll('.view-tab').forEach(tab => {
+    tab.classList.toggle('active', (tab as HTMLElement).dataset.view === view);
+  });
+
+  if (view === 'list') {
+    listContainer.classList.remove('hidden');
+    analyticsContainer.classList.add('hidden');
+    document.querySelector('.add-section')?.classList.remove('hidden');
+  } else {
+    listContainer.classList.add('hidden');
+    analyticsContainer.classList.remove('hidden');
+    document.querySelector('.add-section')?.classList.add('hidden');
+
+    if (isFeatureUnlocked(subscription, 'analytics')) {
+      analyticsUpgrade.classList.add('hidden');
+      analyticsContent.classList.remove('hidden');
+      renderAnalytics();
+    } else {
+      analyticsUpgrade.classList.remove('hidden');
+      analyticsContent.classList.add('hidden');
+    }
+  }
+}
+
+// ── Subscription UI ─────────────────────────────────
+
+function updateProUI() {
+  const isPro = subscription.isPro;
+
+  // Pro badge
+  proBadge.classList.toggle('hidden', !isPro);
+
+  // Export button
+  if (isPro) {
+    exportBtn.classList.remove('disabled');
+    exportBtn.title = 'Export CSV';
+  } else {
+    exportBtn.classList.add('disabled');
+    exportBtn.title = 'Export CSV (Pro)';
+  }
+
+  // Upgrade banner
+  upgradeBanner.classList.toggle('hidden', isPro);
+
+  // Settings subscription info — use safe DOM methods
+  subscriptionInfo.replaceChildren();
+  const desc = el('p', { className: 'settings-desc' },
+    isPro ? 'Logged Pro — All features unlocked.' : 'Free tier — unlimited tracking, all detectors.');
+  subscriptionInfo.appendChild(desc);
+
+  upgradeBtn.classList.toggle('hidden', isPro);
+}
+
+// ── Gmail settings UI ───────────────────────────────
+
+async function updateGmailUI() {
+  const status = await send({ type: 'GET_GMAIL_STATUS' }) as GmailStatus;
+  const isPro = subscription.isPro;
+
+  if (status.connected && isPro) {
+    gmailDot.className = 'gmail-dot connected';
+    gmailStatusText.textContent = 'Connected';
+    gmailConnectBtn.classList.add('hidden');
+    gmailDisconnectBtn.classList.remove('hidden');
+    gmailCheckNowBtn.classList.remove('hidden');
+
+    if (status.lastCheck) {
+      const d = new Date(status.lastCheck);
+      gmailLastCheck.textContent = `Last checked: ${d.toLocaleString()}`;
+      gmailLastCheck.classList.remove('hidden');
+    }
+  } else {
+    gmailDot.className = 'gmail-dot disconnected';
+    gmailStatusText.textContent = isPro ? 'Not connected' : 'Pro feature';
+    gmailConnectBtn.classList.toggle('hidden', !isPro);
+    gmailDisconnectBtn.classList.add('hidden');
+    gmailCheckNowBtn.classList.add('hidden');
+    gmailLastCheck.classList.add('hidden');
+  }
+}
+
+// ── Event handlers ───────────────────────────────────
 
 // Search
 searchInput.addEventListener('input', () => {
@@ -324,6 +541,13 @@ statusFilters.addEventListener('click', (e) => {
   btn.classList.add('active');
   activeFilter = (btn.dataset.status as ApplicationStatus | 'all') ?? 'all';
   renderList();
+});
+
+// View tabs
+viewTabs.addEventListener('click', (e) => {
+  const tab = (e.target as HTMLElement).closest('.view-tab') as HTMLButtonElement | null;
+  if (!tab) return;
+  switchView(tab.dataset.view as 'list' | 'stats');
 });
 
 // Toggle add form
@@ -401,10 +625,81 @@ appList.addEventListener('click', async (e) => {
   renderList();
 });
 
-// ── Init ─────────────────────────────────────────────────
+// Export CSV
+exportBtn.addEventListener('click', () => {
+  if (!isFeatureUnlocked(subscription, 'csv_export')) {
+    send({ type: 'OPEN_PAYMENT_PAGE' });
+    return;
+  }
+  exportToCSV(applications);
+});
+
+// Settings
+settingsBtn.addEventListener('click', () => {
+  settingsOverlay.classList.remove('hidden');
+  updateGmailUI();
+});
+
+settingsClose.addEventListener('click', () => {
+  settingsOverlay.classList.add('hidden');
+});
+
+// Gmail actions
+gmailConnectBtn.addEventListener('click', async () => {
+  gmailConnectBtn.textContent = 'Connecting...';
+  const result = await send({ type: 'CONNECT_GMAIL' }) as GmailStatus;
+  if (result.connected) {
+    await updateGmailUI();
+  } else {
+    gmailStatusText.textContent = result.error || 'Connection failed';
+    gmailConnectBtn.textContent = 'Connect Gmail';
+  }
+});
+
+gmailDisconnectBtn.addEventListener('click', async () => {
+  await send({ type: 'DISCONNECT_GMAIL' });
+  await updateGmailUI();
+});
+
+gmailCheckNowBtn.addEventListener('click', async () => {
+  gmailCheckNowBtn.textContent = 'Checking...';
+  const result = await send({ type: 'CHECK_GMAIL_NOW' }) as GmailStatus & { detected: number };
+  gmailCheckNowBtn.textContent = 'Check Now';
+  if (result.detected > 0) {
+    // Refresh application list
+    applications = (await send({ type: 'GET_APPLICATIONS' })) as Application[];
+    renderList();
+    gmailStatusText.textContent = `Found ${result.detected} new`;
+  }
+  await updateGmailUI();
+});
+
+// Upgrade buttons
+upgradeBannerBtn.addEventListener('click', () => {
+  send({ type: 'OPEN_PAYMENT_PAGE' });
+});
+
+analyticsUpgradeBtn.addEventListener('click', () => {
+  send({ type: 'OPEN_PAYMENT_PAGE' });
+});
+
+upgradeBtn.addEventListener('click', () => {
+  send({ type: 'OPEN_PAYMENT_PAGE' });
+});
+
+// ── Init ─────────────────────────────────────────────
 
 async function init() {
-  applications = (await send({ type: 'GET_APPLICATIONS' })) as Application[];
+  // Fetch data and subscription in parallel
+  const [apps, sub] = await Promise.all([
+    send({ type: 'GET_APPLICATIONS' }) as Promise<Application[]>,
+    send({ type: 'GET_SUBSCRIPTION' }) as Promise<SubscriptionState>,
+  ]);
+
+  applications = apps;
+  subscription = sub;
+
+  updateProUI();
   renderList();
 }
 
