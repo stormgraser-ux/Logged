@@ -51,4 +51,7 @@ export type Message =
   | { type: 'CONNECT_GMAIL'; payload?: undefined }
   | { type: 'DISCONNECT_GMAIL'; payload?: undefined }
   | { type: 'GET_GMAIL_STATUS'; payload?: undefined }
-  | { type: 'CHECK_GMAIL_NOW'; payload?: undefined };
+  | { type: 'CHECK_GMAIL_NOW'; payload?: undefined }
+  | { type: 'ENABLE_UNIVERSAL_DETECTOR'; payload?: undefined }
+  | { type: 'DISABLE_UNIVERSAL_DETECTOR'; payload?: undefined }
+  | { type: 'GET_UNIVERSAL_DETECTOR_STATUS'; payload?: undefined };

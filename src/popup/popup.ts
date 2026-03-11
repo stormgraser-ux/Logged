@@ -45,6 +45,10 @@ const analyticsUpgrade = $<HTMLDivElement>('analyticsUpgrade');
 const analyticsUpgradeBtn = $<HTMLButtonElement>('analyticsUpgradeBtn');
 const analyticsContent = $<HTMLDivElement>('analyticsContent');
 
+// Universal detector toggle
+const universalToggle = $<HTMLDivElement>('universalToggle');
+const universalDesc = $<HTMLParagraphElement>('universalDesc');
+
 // Gmail settings
 const gmailDot = $<HTMLSpanElement>('gmailDot');
 const gmailStatusText = $<HTMLSpanElement>('gmailStatusText');
@@ -65,7 +69,10 @@ const inputNotes = $<HTMLInputElement>('inputNotes');
 // ── Messaging ────────────────────────────────────────
 
 function send(message: Message): Promise<unknown> {
-  return chrome.runtime.sendMessage(message);
+  return chrome.runtime.sendMessage(message).catch(() => {
+    // Service worker may have been idle — retry once to wake it
+    return chrome.runtime.sendMessage(message);
+  });
 }
 
 // ── DOM helpers ──────────────────────────────────────
@@ -635,13 +642,39 @@ exportBtn.addEventListener('click', () => {
 });
 
 // Settings
-settingsBtn.addEventListener('click', () => {
+settingsBtn.addEventListener('click', async () => {
   settingsOverlay.classList.remove('hidden');
+  // Initialize universal detector toggle
+  const uniStatus = await send({ type: 'GET_UNIVERSAL_DETECTOR_STATUS' }) as { enabled: boolean };
+  universalToggle.classList.toggle('active', uniStatus.enabled);
+  universalDesc.textContent = uniStatus.enabled
+    ? 'Active — detecting applications on all websites.'
+    : 'Catches applications on company career pages powered by other ATS systems.';
   updateGmailUI();
 });
 
 settingsClose.addEventListener('click', () => {
   settingsOverlay.classList.add('hidden');
+});
+
+// Universal detector toggle
+universalToggle.addEventListener('click', async () => {
+  const isActive = universalToggle.classList.contains('active');
+  if (isActive) {
+    await send({ type: 'DISABLE_UNIVERSAL_DETECTOR' });
+    universalToggle.classList.remove('active');
+    universalDesc.textContent = 'Catches applications on company career pages powered by other ATS systems.';
+  } else {
+    // Must request permission from a user gesture context (popup counts)
+    const granted = await chrome.permissions.request({
+      origins: ['https://*/*', 'http://*/*'],
+    });
+    if (granted) {
+      await send({ type: 'ENABLE_UNIVERSAL_DETECTOR' });
+      universalToggle.classList.add('active');
+      universalDesc.textContent = 'Active — detecting applications on all websites.';
+    }
+  }
 });
 
 // Gmail actions

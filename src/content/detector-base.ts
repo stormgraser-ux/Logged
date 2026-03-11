@@ -17,13 +17,17 @@ export interface DetectedApplication {
   salary?: string | null;
 }
 
-/** Send a detected application to the background service worker */
+/** Send a detected application to the background service worker (retries once on failure) */
 export function reportDetection(data: DetectedApplication): void {
-  chrome.runtime.sendMessage({
-    type: 'APPLICATION_DETECTED',
-    payload: data,
-  });
+  const msg = { type: 'APPLICATION_DETECTED', payload: data };
   console.log(`[Logged] Detected application: ${data.company} — ${data.role}`);
+  chrome.runtime.sendMessage(msg).catch(() => {
+    // Service worker may have been idle — retry once to wake it
+    setTimeout(() => {
+      chrome.runtime.sendMessage(msg)
+        .catch((err) => console.warn('[Logged] Detection report failed:', err));
+    }, 500);
+  });
 }
 
 /** Observe DOM mutations, calling `callback` when new nodes are added */

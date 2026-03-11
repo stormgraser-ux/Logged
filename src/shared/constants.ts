@@ -32,4 +32,6 @@ export const STORAGE_KEYS = {
   SUBSCRIPTION: 'logged_subscription',
   GMAIL_CONNECTED: 'logged_gmail_connected',
   GMAIL_LAST_CHECK: 'logged_gmail_last_check',
+  UNIVERSAL_ENABLED: 'logged_universal_enabled',
+  CACHED_JOB: 'logged_cached_job',
 } as const;

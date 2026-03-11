@@ -49,8 +49,9 @@ export function computeAnalytics(apps: Application[]): AnalyticsData {
     : thisWeek > 0 ? 100 : 0;
 
   // ── Response rates ─────────────────────────────────
-  const movedPastApplied = apps.filter(a => a.status !== 'applied').length;
-  const responseRate = totalApps > 0 ? Math.round((movedPastApplied / totalApps) * 100) : 0;
+  // Only count interviewing/offer as actual responses (not manually closed)
+  const gotResponse = apps.filter(a => a.status === 'interviewing' || a.status === 'offer').length;
+  const responseRate = totalApps > 0 ? Math.round((gotResponse / totalApps) * 100) : 0;
 
   const interviewing = apps.filter(a => a.status === 'interviewing' || a.status === 'offer').length;
   const interviewRate = totalApps > 0 ? Math.round((interviewing / totalApps) * 100) : 0;
@@ -64,7 +65,7 @@ export function computeAnalytics(apps: Application[]): AnalyticsData {
     const p = app.sourcePlatform || 'unknown';
     const existing = platformMap.get(p) || { count: 0, responded: 0 };
     existing.count++;
-    if (app.status !== 'applied') existing.responded++;
+    if (app.status === 'interviewing' || app.status === 'offer') existing.responded++;
     platformMap.set(p, existing);
   }
   const platformBreakdown: PlatformStat[] = Array.from(platformMap.entries())

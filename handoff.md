@@ -1,41 +1,52 @@
 # Logged — Handoff
 
 ## Current State
-**Phase:** Week 4 COMPLETE — ExtensionPay + paid tier features
-**Status:** v0.5.0 — Subscription gating, salary detection, CSV export, analytics, Gmail parsing
+**Phase:** Pre-launch hardening
+**Status:** v0.6.0 — CWS launch blockers fixed, reliability improvements
 
-## What's Built
-- **Everything from v0.4.0** (5 detectors + universal + follow-up badge)
-- **ExtensionPay integration** — `extpay` npm package, content_script for payment callbacks, subscription state cached in service worker + chrome.storage
-- **Subscription gating** — Pro badge in header, upgrade banner for free users, per-feature gate checks via `isFeatureUnlocked()`
-- **Salary detection** — `parseSalary()` handles `$80K-$100K`, `$25/hr`, `$120,000-$160,000/yr`. Platform-specific selectors (LinkedIn job insights, Indeed salary elements, Workday automation IDs) + generic `extractSalaryFromPage()` fallback. Always collected, displayed only for Pro users (free users see "Salary (Pro)" locked indicator as upsell).
-- **CSV export** — Proper CSV escaping (quotes, commas, newlines), `chrome.downloads.download()` with save-as dialog. Headers: Company, Role, Status, Date, URL, Platform, Salary, Notes, Detected By.
-- **Analytics dashboard** — Tab navigation (Applications / Analytics). CSS-only charts: velocity bar chart (8 weeks), response rate progress bar, source effectiveness table, avg days to response. All computed from application data, no chart library.
-- **Gmail parsing** — OAuth via `chrome.identity.getAuthToken()`, Gmail API query for confirmation emails (last 24h), regex patterns for "thank you for applying" etc., 48h dedup window, 30-min alarm check. Settings panel with connect/disconnect/check-now buttons.
-- **Settings panel** — Gear icon in header opens full overlay with Gmail connection status + subscription info
-- **Upgrade flows** — Multiple touchpoints: footer banner, analytics tab gate, export button tooltip, salary locked indicator, settings page. All route to `extpay.openPaymentPage()`.
+## What Changed in v0.6.0
+
+### CWS Blockers Fixed
+- **Universal detector → opt-in via optional permissions.** Removed `https://*/*` from manifest `content_scripts`. Now uses `optional_host_permissions` + `chrome.scripting.registerContentScripts()`. Toggle in Settings > Detection. CWS reviewers won't flag this.
+- **Privacy policy** created at `docs/privacy-policy.html`. Ready to host on GitHub Pages. Covers local-only storage, Gmail access, no telemetry.
+- **Support email** — `homepage_url` added to manifest. Actual support email goes in CWS Developer Dashboard (not a manifest field in MV3).
+- **`scripting` permission** added to manifest for dynamic content script registration.
+
+### Reliability Fixes
+- **Analytics response rate** — Only counts `interviewing`/`offer` as responses. Previously counted `closed` as a response, which inflated the metric.
+- **Service worker cache → `chrome.storage.session`** — `cachedJob` (cross-tab handoff) now survives SW restarts. `cachedSubscription` loads from session storage on startup before async ExtPay refresh.
+- **Silent failure handling** — `reportDetection()` in detector-base retries once on sendMessage failure (wakes sleeping SW). Popup `send()` also retries once. Content scripts already had `.catch()` on their sends.
+
+### Screenshots Still Needed
+CWS requires 3-4 screenshots. User needs to capture:
+1. Popup list view with some applications
+2. Analytics tab
+3. Settings panel showing detection toggle
+4. (Optional) Detection in action on a job site
 
 ## Architecture
 ```
 src/
   background/
-    service-worker.ts         → ExtPay init, subscription handlers, gmail alarm, message router
+    service-worker.ts         → ExtPay, subscription (session+local cache), gmail, universal detector registration, message router
     gmail.ts                  → OAuth, email scanning, application email parsing
   content/
-    detector-base.ts          → Shared utilities + DetectedApplication (now with salary?)
-    detectors/                → All 6 detectors now extract salary
+    detector-base.ts          → Shared utilities + retry-on-failure reporting
+    detectors/                → 5 dedicated + 1 universal (dynamically registered)
   popup/
-    popup.{html,css,ts}       → Tab switching, pro gating, export, analytics, settings
-    analytics.ts              → computeAnalytics() pure function
+    popup.{html,css,ts}       → Tab switching, pro gating, export, analytics, settings, universal toggle
+    analytics.ts              → computeAnalytics() — fixed response rate
     csv-export.ts             → exportToCSV() with chrome.downloads
   shared/
-    types.ts                  → Application (now with salary?), new message types
+    types.ts                  → +3 universal detector message types
     storage.ts                → chrome.storage CRUD + dedup
-    constants.ts              → Storage keys (SUBSCRIPTION, GMAIL_*)
+    constants.ts              → +UNIVERSAL_ENABLED, CACHED_JOB keys
     subscription.ts           → SubscriptionState, isFeatureUnlocked()
     salary.ts                 → parseSalary(), extractSalaryFromPage()
 public/
-  manifest.json               → v0.5.0, identity+downloads perms, oauth2, ExtPay content_script
+  manifest.json               → v0.6.0, +scripting perm, +optional_host_permissions, -universal from content_scripts
+docs/
+  privacy-policy.html         → Host on GitHub Pages for CWS listing
 test/
   careers/premium-test.html   → Salary extraction + premium feature test
 ```
@@ -43,17 +54,12 @@ test/
 ## External Services (All Set Up)
 - **Chrome Web Store** — Extension ID: `nglogklipppafadihodmedaghaabbhjg` (unlisted, pending CWS developer verification)
 - **ExtensionPay** — `logged-tracker` registered, Stripe connected, "Logged Pro" plan ($5/mo) created
-- **Stripe** — Test mode confirmed working (4242 card → subscription active → PRO badge appears)
-- **Google Cloud Console** — Project "Logged Extension", Gmail API enabled, OAuth consent screen configured (Testing), OAuth Client ID: `280227723945-66j4q14ihri4qe8du36ue9t6dhng9lcb.apps.googleusercontent.com` (in manifest.json)
-
-## Testing
-```bash
-cd test && python3 -m http.server 8765
-# http://localhost:8765/careers/premium-test.html?gh_jid=456
-```
-Premium test page exercises: salary extraction ($120K-$160K/yr), universal detection (career path + ATS params), submit confirmation trigger.
+- **Stripe** — Test mode confirmed working
+- **Google Cloud Console** — Project "Logged Extension", Gmail API enabled, OAuth consent screen configured
 
 ## Next Up
-- [ ] Chrome Web Store developer account + listing draft
+- [ ] Take screenshots for CWS listing
+- [ ] Host privacy policy on GitHub Pages
+- [ ] Set support email in CWS Developer Dashboard
+- [ ] Chrome Web Store listing draft + submit
 - [ ] Product Hunt launch prep
-- [ ] Month 2: Deeper Gmail parsing, analytics refinements, CSV export enhancements

@@ -27,6 +27,13 @@ extpay.startBackground();
 
 let cachedSubscription: SubscriptionState = { ...DEFAULT_SUBSCRIPTION };
 
+// Load subscription from session storage immediately (survives SW restarts)
+chrome.storage.session.get(STORAGE_KEYS.SUBSCRIPTION).then(result => {
+  if (result[STORAGE_KEYS.SUBSCRIPTION]) {
+    cachedSubscription = result[STORAGE_KEYS.SUBSCRIPTION];
+  }
+});
+
 async function refreshSubscription(): Promise<SubscriptionState> {
   try {
     const user = await extpay.getUser();
@@ -39,6 +46,7 @@ async function refreshSubscription(): Promise<SubscriptionState> {
       lastChecked: new Date().toISOString(),
     };
     await chrome.storage.local.set({ [STORAGE_KEYS.SUBSCRIPTION]: cachedSubscription });
+    await chrome.storage.session.set({ [STORAGE_KEYS.SUBSCRIPTION]: cachedSubscription });
   } catch (e) {
     console.error('[Logged] ExtPay getUser failed:', e);
     // Load from storage as fallback
@@ -59,9 +67,62 @@ extpay.onPaid.addListener((user: any) => {
 // Initial subscription check
 refreshSubscription();
 
-// ── In-memory job data cache (for cross-tab handoff) ─────────
+// ── Job data cache (session storage — survives SW restarts) ─────────
 
-let cachedJob: CachedJobData | null = null;
+async function getCachedJob(): Promise<CachedJobData | null> {
+  const result = await chrome.storage.session.get(STORAGE_KEYS.CACHED_JOB);
+  return result[STORAGE_KEYS.CACHED_JOB] || null;
+}
+
+async function setCachedJob(data: CachedJobData): Promise<void> {
+  await chrome.storage.session.set({ [STORAGE_KEYS.CACHED_JOB]: data });
+}
+
+async function clearCachedJob(): Promise<void> {
+  await chrome.storage.session.remove(STORAGE_KEYS.CACHED_JOB);
+}
+
+// ── Universal detector (dynamic registration) ─────────────────
+
+const UNIVERSAL_SCRIPT_ID = 'logged-universal-detector';
+
+async function registerUniversalDetector(): Promise<{ status: string }> {
+  const hasPermission = await chrome.permissions.contains({
+    origins: ['https://*/*', 'http://*/*'],
+  });
+  if (!hasPermission) {
+    return { status: 'no_permission' };
+  }
+  try {
+    try { await chrome.scripting.unregisterContentScripts({ ids: [UNIVERSAL_SCRIPT_ID] }); } catch {}
+    await chrome.scripting.registerContentScripts([{
+      id: UNIVERSAL_SCRIPT_ID,
+      matches: ['https://*/*', 'http://*/*'],
+      js: ['content/detectors/universal.js'],
+      runAt: 'document_idle',
+      allFrames: true,
+    }]);
+    await chrome.storage.local.set({ [STORAGE_KEYS.UNIVERSAL_ENABLED]: true });
+    return { status: 'enabled' };
+  } catch (e) {
+    console.error('[Logged] Failed to register universal detector:', e);
+    return { status: 'error' };
+  }
+}
+
+async function unregisterUniversalDetector(): Promise<{ status: string }> {
+  try { await chrome.scripting.unregisterContentScripts({ ids: [UNIVERSAL_SCRIPT_ID] }); } catch {}
+  await chrome.storage.local.set({ [STORAGE_KEYS.UNIVERSAL_ENABLED]: false });
+  try { await chrome.permissions.remove({ origins: ['https://*/*', 'http://*/*'] }); } catch {}
+  return { status: 'disabled' };
+}
+
+// Re-register universal detector on SW startup if previously enabled
+chrome.storage.local.get(STORAGE_KEYS.UNIVERSAL_ENABLED).then(result => {
+  if (result[STORAGE_KEYS.UNIVERSAL_ENABLED]) {
+    registerUniversalDetector();
+  }
+});
 
 // ── Message handler ─────────────────────────────────────────
 
@@ -102,21 +163,22 @@ async function handleMessage(message: Message): Promise<unknown> {
         status: 'applied',
       });
       // Clear cached job after successful detection
-      cachedJob = null;
+      await clearCachedJob();
       // Re-check follow-up badge (new app won't need follow-up, but count display may shift)
       await updateFollowUpBadge();
       return { status: 'added', application: app };
     }
 
     case 'CACHE_JOB_DATA': {
-      cachedJob = message.payload;
-      console.log(`[Logged] BG: cached job — ${cachedJob.company} / ${cachedJob.role}`);
+      await setCachedJob(message.payload);
+      console.log(`[Logged] BG: cached job — ${message.payload.company} / ${message.payload.role}`);
       return { status: 'cached' };
     }
 
     case 'GET_CACHED_JOB': {
-      console.log(`[Logged] BG: returning cached job — ${cachedJob ? cachedJob.company + ' / ' + cachedJob.role : 'null'}`);
-      return cachedJob;
+      const cached = await getCachedJob();
+      console.log(`[Logged] BG: returning cached job — ${cached ? cached.company + ' / ' + cached.role : 'null'}`);
+      return cached;
     }
 
     // ── Subscription messages ────────────────────────
@@ -144,6 +206,18 @@ async function handleMessage(message: Message): Promise<unknown> {
       const detected = await checkForApplicationEmails();
       const status = await getGmailStatus();
       return { ...status, detected };
+    }
+
+    // ── Universal detector messages ───────────────
+    case 'ENABLE_UNIVERSAL_DETECTOR':
+      return await registerUniversalDetector();
+
+    case 'DISABLE_UNIVERSAL_DETECTOR':
+      return await unregisterUniversalDetector();
+
+    case 'GET_UNIVERSAL_DETECTOR_STATUS': {
+      const stored = await chrome.storage.local.get(STORAGE_KEYS.UNIVERSAL_ENABLED);
+      return { enabled: stored[STORAGE_KEYS.UNIVERSAL_ENABLED] === true };
     }
 
     default:
@@ -203,4 +277,4 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-console.log('[Logged] Service worker v0.5 initialized');
+console.log('[Logged] Service worker v0.6 initialized');
